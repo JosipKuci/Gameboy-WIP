@@ -1,6 +1,7 @@
 #ifndef GB_REGISTERS_H
 #define GB_REGISTERS_H
 #include<stdint.h>
+
 struct gb_registers
 {
     uint8_t a;
@@ -14,5 +15,7 @@ struct gb_registers
 
     uint16_t program_counter;
     uint16_t stack_pointer;
+
+    uint8_t IE;
 };
 #endif
