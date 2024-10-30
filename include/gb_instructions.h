@@ -7,7 +7,7 @@ enum address_mode{
     AM_R_R,  //address mode: register to register
     AM_MR_R, //address mode: register to memory location of register
     AM_R,
-    AM_R_D8,
+    AM_R_D8,//address mode: immediate 8-bit value to register
     AM_R_MR,
     AM_R_HLI,
     AM_R_HLD,
@@ -40,7 +40,8 @@ enum register_type{
     RT_DE,
     RT_HL,
     RT_SP,
-    RT_PC
+    RT_PC,
+    RT_IE
 };
 
 enum instruction_type{
@@ -115,6 +116,6 @@ struct gb_instruction{
 
 struct gb_instruction *instruction_by_opcode(uint8_t opcode);
 
-char *inst_name(enum instruction_type inst_type);
+char *instruction_name(enum instruction_type inst_type);
 
 #endif
