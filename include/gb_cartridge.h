@@ -1,6 +1,5 @@
 #ifndef GB_CARTRIDGE_H
 #define GB_CARTRIDGE_H
-#endif
 #include<stdint.h>
 #include<stdbool.h>
 /*
@@ -140,5 +139,6 @@ int gb_load_cartridge(char* cartridge);
 const char* gb_get_cartridge_license_name();
 const char* gb_get_cartridge_type_name();
 bool gb_test_checksum(uint8_t* rom_data);
-uint8_t gb_cartridge_read(address);
-void gb_cartridge_write(value, address);
+uint8_t gb_cartridge_read(uint16_t address);
+void gb_cartridge_write(uint8_t value,uint16_t address);
+#endif
