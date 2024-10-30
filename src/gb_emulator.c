@@ -47,6 +47,7 @@ int gb_emulator_init(int argc, char **argv)
             printf("CPU Stopped\n");
             return -3;
         }
+        emulator_info.timer_ticks++;
     }
     return 0;
 }
