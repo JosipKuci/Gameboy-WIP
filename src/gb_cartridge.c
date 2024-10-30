@@ -56,11 +56,11 @@ int gb_load_cartridge(char* cartridge)
     printf("Checksum: %d \n", gb_test_checksum(cartridge_info.rom_data));
 }
 
-uint8_t gb_cartridge_read(address)
+uint8_t gb_cartridge_read(uint16_t address)
 {
     return cartridge_info.rom_data[address];
 }
-void gb_cartridge_write(value, address)
+void gb_cartridge_write(uint8_t value, uint16_t address)
 {
-    //Not implimented
+    //Not implemented
 }
