@@ -10,7 +10,7 @@ To compile the code, go to the Gameboy directory and run the command:
 
 Then to start the emulator, change into the  `bin` directory and start the main.exe file by also specifying the ROM you want to play, for example:
 
-`main.exe .\INVADERS`
+`main.exe .\Tetris.gb`
 
 ### Note
 This emulator is in its very early stage of development, currently I have only implemented
