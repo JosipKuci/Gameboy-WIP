@@ -37,4 +37,6 @@ typedef void (*IN_PROC)(struct gb_cpu_info*);
 
 IN_PROC instruction_get_processor(enum instruction_type type);
 
+void gb_cpu_set_register_cb(enum register_type regi, uint8_t value);
+uint8_t gb_cpu_read_register_cb(enum register_type regi);
 #endif
