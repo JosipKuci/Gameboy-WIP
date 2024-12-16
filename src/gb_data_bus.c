@@ -1,6 +1,8 @@
 #include "gb_data_bus.h"
+#include "gb_memory.h"
 #include "gb_cpu.h"
 #include "gb_cartridge.h"
+#include <stdio.h>
 uint8_t gb_bus_read(uint16_t address)
 {
     if(address < 0x8000) //Cartridge memory
@@ -10,6 +12,7 @@ uint8_t gb_bus_read(uint16_t address)
     else if(address < 0xA000) //VRAM
     {
         //Not implemented
+        fprintf(stderr, "NOT YET IMPLEMENTED\n"); exit(-5);
     }
     else if(address < 0xC000) //Cartridge RAM
     {
@@ -27,6 +30,7 @@ uint8_t gb_bus_read(uint16_t address)
     else if(address < 0xFEA0) //Object attribute memory (OAM)
     {
         //Not implemented
+        fprintf(stderr, "NOT YET IMPLEMENTED\n"); exit(-5);
     }
     else if(address < 0xFF00) //Not usable
     {
@@ -36,9 +40,11 @@ uint8_t gb_bus_read(uint16_t address)
     else if(address < 0xFF80) //IO registers
     {
         //Not implemented
+        fprintf(stderr, "NOT YET IMPLEMENTED\n"); exit(-5);
     }
     else if(address < 0xFFFF)//HRAM
     {
+        
         return gb_hram_read(address);
     }
     else if(address == 0xFFFF)//interrupt enable register
@@ -89,7 +95,7 @@ void gb_bus_write(uint8_t value, uint16_t address)
     }
     else if(address < 0xFFFF)//HRAM
     {
-        gb_hram_write(address);
+        gb_hram_write(value,address);
     }
     else if(address == 0xFFFF)//interrupt enable register
     {
