@@ -16,7 +16,7 @@ static void set_bit(struct gb_cpu_info* cpu_info, uint8_t value, uint8_t locatio
 //Checks if the 7th bit of the flags register (the Zero flag) is set
 int get_cpu_z_flag(struct gb_cpu_info* cpu_info)
 {
-    if((cpu_info->registers.f)&(1U<<7)==0b01000000)
+    if(((cpu_info->registers.f)&(1<<7))==0b10000000)
     {
         return 1;
     }
@@ -28,7 +28,7 @@ int get_cpu_z_flag(struct gb_cpu_info* cpu_info)
 //Checks if the 4th bit of the flags register (the Carry flag) is set
 int get_cpu_c_flag(struct gb_cpu_info* cpu_info)
 {
-    if(((cpu_info->registers.f)&(1U<<4))==0b00001000)
+    if(((cpu_info->registers.f)&(1<<4))==0b00010000)
     {
         return 1;
     }
@@ -47,8 +47,8 @@ void gb_cpu_set_flags(struct gb_cpu_info* cpu_info, uint8_t z, uint8_t n, uint8_
 }
 static int check_condition(struct gb_cpu_info *cpu_info)
 {
-    int zero = get_cpu_z_flag(cpu_info);
-    int carry = get_cpu_c_flag(cpu_info);
+    bool zero = get_cpu_z_flag(cpu_info);
+    bool carry = get_cpu_c_flag(cpu_info);
     switch(cpu_info->current_instruction->condition)
     {
         case CT_NONE:
@@ -96,16 +96,14 @@ static void proc_ld(struct gb_cpu_info *cpu_info)
         }
         else
         {
-            gb_emulator_cycle(1);
             gb_bus_write(cpu_info->fetch_data,cpu_info->memory_destination);
         }
+        return;
     }
     if (cpu_info->current_instruction->mode == AM_HL_SPR) {
-        uint8_t hflag = (gb_cpu_read_register(cpu_info->current_instruction->register_2) & 0xF) + 
-            (cpu_info->fetch_data & 0xF) >= 0x10;
+        uint8_t hflag = (gb_cpu_read_register(cpu_info->current_instruction->register_2) & 0xF) + (cpu_info->fetch_data & 0xF) >= 0x10;
 
-        uint8_t cflag = (gb_cpu_read_register(cpu_info->current_instruction->register_2) & 0xFF) + 
-            (cpu_info->fetch_data & 0xFF) >= 0x100;
+        uint8_t cflag = (gb_cpu_read_register(cpu_info->current_instruction->register_2) & 0xFF) + (cpu_info->fetch_data & 0xFF) >= 0x100;
 
         gb_cpu_set_flags(cpu_info, 0, 0, hflag, cflag);
         gb_cpu_set_register(cpu_info->current_instruction->register_1, 
@@ -119,11 +117,11 @@ static void proc_ldh(struct gb_cpu_info *cpu_info)
 {
     if(cpu_info->current_instruction->register_1==RT_A)
     {
-        gb_cpu_set_register(RT_A,gb_bus_read(cpu_info->fetch_data|0xFF00));
+        gb_cpu_set_register(cpu_info->current_instruction->register_1,gb_bus_read(cpu_info->fetch_data|0xFF00));
     }
     else
     {
-        gb_bus_write(RT_A, cpu_info->fetch_data|0xFF00);
+        gb_bus_write(cpu_info->registers.a, cpu_info->memory_destination);
     }
     gb_emulator_cycle(1);
 }
@@ -146,19 +144,46 @@ static void proc_di(struct gb_cpu_info *cpu_info)
 static void proc_xor(struct gb_cpu_info *cpu_info)
 {
     cpu_info->registers.a = cpu_info->registers.a^(cpu_info->fetch_data&0xff);
-    gb_cpu_set_flags(cpu_info,0,0,0,0);
+    bool z=(cpu_info->registers.a==0);
+    gb_cpu_set_flags(cpu_info,z,0,0,0);
+}
+static void proc_or(struct gb_cpu_info *cpu_info)
+{
+    cpu_info->registers.a = cpu_info->registers.a|(cpu_info->fetch_data&0xff);
+    int z=(cpu_info->registers.a==0)?1:0;//myb
+    gb_cpu_set_flags(cpu_info,z,0,0,0);
+}
+static void proc_and(struct gb_cpu_info *cpu_info)
+{
+    cpu_info->registers.a&=cpu_info->fetch_data;
+    int z=(cpu_info->registers.a==0)?1:0; //Check if accumulator is equal to 0, reset n and c, set h
+    gb_cpu_set_flags(cpu_info,z,0,1,0);
+}
+
+static void proc_cp(struct gb_cpu_info *cpu_info) //Comparing A with n, where we just subtract n from A and se if it is zero
+{
+    int check = (int)cpu_info->registers.a-(int)(cpu_info->fetch_data);
+    bool z, n, h, c;
+    z=(check==0);
+    n=1;
+    h=((int)(cpu_info->registers.a&0xF)-(int)(cpu_info->fetch_data&0xF)<0);
+    c=(check<0);
+    gb_cpu_set_flags(cpu_info,z,n,h,c);
 }
 static void proc_pop(struct gb_cpu_info *cpu_info)
 {
     //Since the AF register contains the flags between the 8th and 4th least significant bit, 
     //All of them are changed when doing a stack pop, the 4 least significant bits should be set as 0.
+    uint16_t low = gb_stack_pop();
+    uint16_t high = gb_stack_pop();
+    uint16_t value = (high<<8)|low;
     if(cpu_info->current_instruction->register_1==RT_AF)
     {
-        gb_cpu_set_register(cpu_info->current_instruction->register_1,gb_stack_pop_16()&0xfff0);
+        gb_cpu_set_register(cpu_info->current_instruction->register_1,value&0xfff0);
     }
     else
     {
-        gb_cpu_set_register(cpu_info->current_instruction->register_1,gb_stack_pop_16());
+        gb_cpu_set_register(cpu_info->current_instruction->register_1,value);
     }
 }
 
@@ -176,13 +201,13 @@ static void proc_call(struct gb_cpu_info *cpu_info)
 {
     jump_to_address(cpu_info, cpu_info->fetch_data, true);
 }
-//Unconditional jump to the relative address specified by the signed 8-bit operand e.
+//conditional jump to the relative address specified by the signed 8-bit operand offset.
 static void proc_jr(struct gb_cpu_info *cpu_info)
 {
-    int16_t offset = cpu_info->fetch_data & 0xff;
-    offset+=cpu_info->registers.program_counter;
-    jump_to_address(cpu_info,offset,false);
-
+            int8_t offset = (int8_t)(cpu_info->fetch_data);
+            uint16_t address=cpu_info->registers.program_counter+offset;
+            jump_to_address(cpu_info,address,false);
+            return;
 }
 static void proc_ret(struct gb_cpu_info *cpu_info)
 {
@@ -210,21 +235,342 @@ static void proc_rst(struct gb_cpu_info *cpu_info)
     jump_to_address(cpu_info, cpu_info->current_instruction->param, true);
 }
 
-static void proc_inc(struct gb_cpu_info *cpu_info)
+static void proc_inc(struct gb_cpu_info *cpu_info)//OVDJE SE VRATITI ZBOG HL-A
 {
     uint16_t value=gb_cpu_read_register(cpu_info->current_instruction->register_1)+1;
     if(cpu_info->current_instruction->register_1>=RT_AF)//Do an extra m-cycle if register is 16-bit
     {
         gb_emulator_cycle(1);
-        if(cpu_info->current_instruction->register_1==RT_HL && cpu_info->is_destination_to_memory==true)
+        if(cpu_info->current_instruction->register_1==RT_HL && cpu_info->current_instruction->mode==AM_MR)
         {
             value &= 0xFF;
             gb_bus_write(value,gb_cpu_read_register(RT_HL));
+            if((cpu_info->current_opcode&0x03)==0x03)//Checks if opcode ends with 0x03, then we dont have to change CPU flags
+            {
+                return;
+            }
+            else
+            {
+                bool z,n,h,c;
+                z=(value==0x0000);
+                n=0;//reset
+                h=((value&0x0F)==0x0000); //set if carry from bit 3
+                c=-1; //do not change value of c
+                gb_cpu_set_flags(cpu_info,z,n,h,c);
+            }
             return;
         }
     }
     gb_cpu_set_register(cpu_info->current_instruction->register_1, value);
+    if((cpu_info->current_opcode&0x03)==0x03)//Checks if opcode ends with 0x03, then we dont have to change CPU flags
+            {
+                return;
+            }
+            else
+            {
+                bool z,n,h,c;
+                z=(value==0x0000);
+                n=0;//reset
+                h=((value&0x0F)==0x0000); //set if carry from bit 3
+                c=-1; //do not change value of c
+                gb_cpu_set_flags(cpu_info,z,n,h,c);
+            }
 }
+static void proc_dec(struct gb_cpu_info *cpu_info)//OVDJE SE VRATITI ZBOG HL-A
+{
+    uint16_t value=gb_cpu_read_register(cpu_info->current_instruction->register_1)-1;
+    if(cpu_info->current_instruction->register_1>=RT_AF)//Do an extra m-cycle if register is 16-bit
+    {
+        gb_emulator_cycle(1);
+    }
+        gb_emulator_cycle(1);
+        if(cpu_info->current_instruction->register_1==RT_HL && cpu_info->current_instruction->mode==AM_MR)
+        {
+            value = gb_bus_read(gb_cpu_read_register(RT_HL))-1;
+            gb_bus_write(value,gb_cpu_read_register(RT_HL));
+        }
+        else
+        {
+            gb_cpu_set_register(cpu_info->current_instruction->register_1,value);
+            value=gb_cpu_read_register(cpu_info->current_instruction->register_1);
+        }
+        if((cpu_info->current_opcode&0x0B)==0x0B)
+            return;
+        else
+        {
+            bool z,n,h,c;
+                z=(value==0x0000);
+                n=1;//set
+                h=((value&0x0F)==0x0F); //set if no borrow from bit 4
+                c=-1;
+                gb_cpu_set_flags(cpu_info,z,n,h,c);
+        }
+}
+
+
+static void proc_add(struct gb_cpu_info* cpu_info)
+{
+    bool z,n,h,c;
+    uint32_t value=gb_cpu_read_register(cpu_info->current_instruction->register_1)+cpu_info->fetch_data;
+    if(cpu_info->current_instruction->register_1>=RT_AF)
+    {
+        gb_emulator_cycle(1);
+        z=-1;
+        n=0;
+        h=(gb_cpu_read_register(cpu_info->current_instruction->register_1)&0xFFF)+(cpu_info->fetch_data&0xFFF)>=0x1000;
+        uint32_t carry_check = (uint32_t)(gb_cpu_read_register(cpu_info->current_instruction->register_1))+(uint32_t)(cpu_info->fetch_data);
+        c= carry_check>=0x10000;
+        if(cpu_info->current_instruction->register_1==RT_SP)
+        {
+            value=gb_cpu_read_register(cpu_info->current_instruction->register_1)+(char)cpu_info->fetch_data; //cast it as char as it may be negative
+            z = 0;
+            h=(gb_cpu_read_register(cpu_info->current_instruction->register_1)&0xF)+(cpu_info->fetch_data&0xF)>=0x10;
+            c=((int)(gb_cpu_read_register(cpu_info->current_instruction->register_1)&0xFF)+(int)(cpu_info->fetch_data&0xFF))>=0x100;
+        }
+    }
+    else
+    {
+        z=(value&0xFF)==0;
+        n=0;
+        h=(gb_cpu_read_register(cpu_info->current_instruction->register_1)&0xF)+(cpu_info->fetch_data&0xF)>=0x10;
+        c=((int)(gb_cpu_read_register(cpu_info->current_instruction->register_1)&0xFF)+(int)(cpu_info->fetch_data&0xFF))>=0x100;
+    }
+    gb_cpu_set_register(cpu_info->current_instruction->register_1,value&0xFFFF);
+    gb_cpu_set_flags(cpu_info,z,n,h,c);
+    
+    
+}
+static void proc_adc(struct gb_cpu_info* cpu_info)//add to accumulator n and carry
+{
+    uint16_t value=cpu_info->fetch_data;
+    uint16_t carry = get_cpu_c_flag(cpu_info);
+    uint16_t accumulator = cpu_info->registers.a;
+    accumulator+=value+carry;
+    gb_cpu_set_register(RT_A,accumulator&0xFF);
+    bool z, n, h, c;
+    z=(cpu_info->registers.a==0);
+    n=0;
+    h=(((value&0xF)+((accumulator&0xF)+carry))>0xF);
+    c=((value+carry+accumulator)>0xFF);
+    gb_cpu_set_flags(cpu_info,z,n,h,c);
+}
+
+static void proc_sub(struct gb_cpu_info* cpu_info)
+{
+    uint16_t value=cpu_info->fetch_data;
+    uint16_t accumulator = cpu_info->registers.a;
+    accumulator-=value;
+    gb_cpu_set_register(RT_A,accumulator&0xFF);
+    bool z, n, h, c;
+    z=(cpu_info->registers.a==0);
+    n=1;
+    h=((int)(accumulator&0xF)-(int)(value&0xF)<0);
+    c=((int)(accumulator)-(int)(value)<0);
+    gb_cpu_set_flags(cpu_info,z,n,h,c);
+
+}
+static void proc_sbc(struct gb_cpu_info* cpu_info)
+{
+    uint16_t carry = get_cpu_c_flag(cpu_info);
+    uint16_t value=cpu_info->fetch_data;
+    uint16_t accumulator = cpu_info->registers.a;
+    accumulator-=(value+carry);
+    gb_cpu_set_register(RT_A,accumulator&0xFF);
+    bool z, n, h, c;
+    z=(cpu_info->registers.a==0);
+    n=1;
+    h=((int)(accumulator&0xF)-(int)(value&0xF)-(int)(carry&0xF)<0);
+    c=((int)(accumulator)-(int)(value)-(int)(carry)<0);
+    gb_cpu_set_flags(cpu_info,z,n,h,c);
+}
+enum register_type register_lookup_cb[]={
+    RT_B,
+    RT_C,
+    RT_D,
+    RT_E,
+    RT_H,
+    RT_L,
+    RT_HL,
+    RT_A,
+};
+
+enum register_type decode_register_for_cb(uint8_t reg)
+{
+    if(reg>0b00000111)
+    {
+        return RT_NONE;
+    }
+    else
+    {
+        return register_lookup_cb[reg];
+    }
+}
+static void proc_cb(struct gb_cpu_info* cpu_info)
+{
+    uint8_t cb_operation = cpu_info->fetch_data;
+    enum register_type regi=decode_register_for_cb(cb_operation&0b00000111); //Getting which register we are working with from the opcode table
+    uint8_t used_bit=(cb_operation>>3)&0b00000111;//Seeing what bit the operation needs
+    uint8_t bit_operation = (cb_operation>>6)&0b00000011;
+    uint8_t register_value = gb_cpu_read_register_cb(regi);
+    bool z, n, h, c;
+    gb_emulator_cycle(1);
+    if(regi==RT_HL)
+    {
+        gb_emulator_cycle(2);
+
+    }
+
+    switch(bit_operation)
+    {
+        case 1://Test bit in register
+        {
+            z=~(register_value&(1<<used_bit));//Set if bit of register is 0
+            n=0; //Reset
+            h=1; //Set
+            c=-1; //not affected
+            gb_cpu_set_flags(cpu_info,z,n,h,c);
+            return;
+        }
+        case 2:
+        {
+            //RST
+            uint8_t current_register = gb_cpu_read_register(regi);
+            current_register&=~(1U<<used_bit);
+            gb_cpu_set_register_cb(regi,current_register);
+            return;
+        }
+        case 3:
+        {
+            //SET
+            uint8_t current_register = gb_cpu_read_register(regi);
+            current_register|=(1U<<used_bit);
+            gb_cpu_set_register_cb(regi,current_register);
+            return;
+        }
+        c=get_cpu_c_flag(cpu_info);
+        switch(used_bit)
+        {
+            case 0:
+            {
+                //RLC
+                c=false;
+                c=(register_value&(1<<7));
+                register_value=(register_value<<1)&0xFF;
+                if(c)
+                {
+                    register_value|=1;//Setting the 1st bit as 1 if 7th bit was 1
+                }
+                z=(register_value==0);
+                n=0;
+                h=0;
+                gb_cpu_set_flags(cpu_info,z,n,h,c);
+                gb_cpu_set_register_cb(regi,register_value);
+                return;
+            }
+            case 1:
+            {
+                //RRC
+                c=false;
+                c=(register_value&1);
+                if(c)
+                {
+                    register_value|=0b10000000;
+                }
+                z=(register_value==0);
+                n=0;
+                h=0;
+                gb_cpu_set_flags(cpu_info,z,n,h,c);
+                gb_cpu_set_register_cb(regi,register_value);
+                return;
+            }
+            case 2:
+            {
+                //RL
+                uint8_t old_c = c;
+                c=(register_value&(1<<7));//new carry is 7th bit of unprocessed register
+                register_value=(register_value<<1);//shit register to left by 1
+                register_value|=old_c;//least significant bit is bitwise OR-ed with carry
+                z=(register_value==0);
+                n=0;
+                h=0;
+                gb_cpu_set_flags(cpu_info,z,n,h,c);
+                gb_cpu_set_register_cb(regi,register_value);
+                return;
+            }
+            case 3:
+            {
+                //RR
+                uint8_t old_c = c;
+                c=(register_value&1);//new carry is 1st bit of unprocessed register
+                register_value=(register_value>>1);//shit register to right by 1
+                register_value|=(old_c<<7);//most significant bit is bitwise OR-ed with carry
+                z=(register_value==0);
+                n=0;
+                h=0;
+                gb_cpu_set_flags(cpu_info,z,n,h,c);
+                gb_cpu_set_register_cb(regi,register_value);
+                return;
+            }
+            case 4:
+            {
+                //SLA
+                c=(register_value&(1<<7));
+                register_value=(register_value<<1);
+                z=(register_value==0);
+                n=0;
+                h=0;
+                gb_cpu_set_flags(cpu_info,z,n,h,c);
+                gb_cpu_set_register_cb(regi,register_value);
+                return;
+            }
+            case 5://Shift n right into Carry. MSB doesn't change.
+            {
+                //SRA
+                c=register_value&1;
+                uint8_t msb=(register_value&(1<<7));
+                register_value=(register_value>>1);
+                register_value&=~(1U<<7);
+                register_value|=(msb<<7);//Setting msb to previous msb
+                z=(register_value==0);
+                n=0;
+                h=0;
+                gb_cpu_set_flags(cpu_info,z,n,h,c);
+                gb_cpu_set_register_cb(regi,register_value);
+                return;
+            }
+            case 6: //switches high 4 bits and low 4 bits
+            {
+                uint8_t high=register_value&0x0F;
+                uint8_t low=(register_value&0xF0)>>4;
+                register_value=(high<<4)|low;
+                gb_cpu_set_register_cb(regi,register_value);
+                z=(register_value==0);
+                n=0;
+                h=0;
+                c=0;
+                gb_cpu_set_flags(cpu_info,z,n,h,c);
+                return;
+            }
+            case 7://Shift n right into Carry. MSB set to 0.
+            {
+                //SRL
+                c=register_value&1; //Mozda krivo, ali ono
+                register_value=(register_value>>1);
+                register_value&=~(1U<<7);
+                z=(register_value==0);
+                n=0;
+                h=0;
+                gb_cpu_set_flags(cpu_info,z,n,h,c);
+                gb_cpu_set_register_cb(regi,register_value);
+                return;
+            }
+        }
+
+    }
+
+
+}
+
 static IN_PROC processors[]={
     [IN_NONE]=proc_none,
     [IN_NOP]=proc_nop,
@@ -233,6 +579,9 @@ static IN_PROC processors[]={
     [IN_JP]=proc_jp,
     [IN_DI]=proc_di, //Disables master interrupts
     [IN_XOR]=proc_xor,
+    [IN_OR]=proc_or,
+    [IN_AND]=proc_and,
+    [IN_CP]=proc_cp,
     [IN_POP]=proc_pop,
     [IN_PUSH]=proc_push,
     [IN_CALL]=proc_call,
@@ -240,6 +589,13 @@ static IN_PROC processors[]={
     [IN_RET]=proc_ret,
     [IN_RETI]=proc_reti, //returns and enables master interrupt
     [IN_RST]=proc_rst,
+    [IN_INC]=proc_inc,
+    [IN_DEC]=proc_dec,
+    [IN_ADD]=proc_add,
+    [IN_ADC]=proc_adc,
+    [IN_SUB]=proc_sub,
+    [IN_SBC]=proc_sbc,
+    [IN_CB]=proc_cb,
 
 };
 

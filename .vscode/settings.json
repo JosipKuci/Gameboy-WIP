@@ -58,7 +58,9 @@
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "files.associations": {
     "gb_emulator.h": "c",
-    "gb_data_bus.h": "c"
+    "gb_data_bus.h": "c",
+    "type_traits": "c",
+    "gb_cpu.h": "c"
   },
   "makefile.configureOnOpen": false
 }
