@@ -6,12 +6,15 @@
 //Stack pointer at start set to the end of wram (0xDFFF)
 void gb_stack_push(uint8_t data)
 {
-    gb_get_all_registers()->stack_pointer--;
+    gb_get_all_registers()->stack_pointer=gb_get_all_registers()->stack_pointer-1;
     gb_bus_write(data, gb_get_all_registers()->stack_pointer);
 }
 uint8_t gb_stack_pop()
 {
-    return gb_bus_read(gb_get_all_registers()->stack_pointer++);
+    uint16_t oldstack = gb_get_all_registers()->stack_pointer;
+    gb_get_all_registers()->stack_pointer=gb_get_all_registers()->stack_pointer+1;
+    return gb_bus_read(oldstack);
+
 }
 
 void gb_stack_push_16(uint16_t data)
