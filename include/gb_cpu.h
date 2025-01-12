@@ -16,6 +16,8 @@ struct gb_cpu_info
     bool is_halted;
     bool is_stepping;
     bool is_master_interrupt_enabled;
+    bool is_enabling_interrupt;
+    uint8_t interrupt_flags;
 
     struct gb_instruction *current_instruction;
 };
@@ -39,4 +41,7 @@ IN_PROC instruction_get_processor(enum instruction_type type);
 
 void gb_cpu_set_register_cb(enum register_type regi, uint8_t value);
 uint8_t gb_cpu_read_register_cb(enum register_type regi);
+
+uint8_t gb_cpu_get_interrupt_flags();
+void gb_cpu_set_interrupt_flags(uint8_t value);
 #endif
