@@ -2,6 +2,7 @@
 #include "gb_memory.h"
 #include "gb_cpu.h"
 #include "gb_cartridge.h"
+#include "gb_io.h"
 #include <stdio.h>
 uint8_t gb_bus_read(uint16_t address)
 {
@@ -12,7 +13,8 @@ uint8_t gb_bus_read(uint16_t address)
     else if(address < 0xA000) //VRAM
     {
         //Not implemented
-        fprintf(stderr, "NOT YET IMPLEMENTED\n"); exit(-5);
+        //fprintf(stderr, "NOT YET IMPLEMENTED\n"); exit(-5);
+        return 0;
     }
     else if(address < 0xC000) //Cartridge RAM
     {
@@ -30,7 +32,8 @@ uint8_t gb_bus_read(uint16_t address)
     else if(address < 0xFEA0) //Object attribute memory (OAM)
     {
         //Not implemented
-        fprintf(stderr, "NOT YET IMPLEMENTED\n"); exit(-5);
+        //fprintf(stderr, "NOT YET IMPLEMENTED\n"); exit(-5);
+        return 0;
     }
     else if(address < 0xFF00) //Not usable
     {
@@ -39,19 +42,17 @@ uint8_t gb_bus_read(uint16_t address)
     }
     else if(address < 0xFF80) //IO registers
     {
-        //Not implemented
-        fprintf(stderr, "NOT YET IMPLEMENTED\n"); exit(-5);
+        return gb_io_read(address);
     }
     else if(address < 0xFFFF)//HRAM
     {
-        
         return gb_hram_read(address);
     }
     else if(address == 0xFFFF)//interrupt enable register
     {
         return gb_cpu_read_register(RT_IE);
     }
-    return;
+    return 0;
 }
 uint16_t gb_bus_read_16(uint16_t address)
 {
@@ -91,21 +92,21 @@ void gb_bus_write(uint8_t value, uint16_t address)
     }
     else if(address < 0xFF80) //IO registers
     {
-        //Not implemented
-    }
-    else if(address < 0xFFFF)//HRAM
-    {
-        gb_hram_write(value,address);
+        gb_io_write(value, address);
     }
     else if(address == 0xFFFF)//interrupt enable register
     {
         gb_cpu_set_register(RT_IE, value);
     }
+    else
+    {
+        gb_hram_write(value,address);
+    }
     return;
 }
 void gb_bus_write_16(uint16_t value, uint16_t address)
 {
-    gb_bus_write(address + 1, (value >> 8) & 0xFF);
-    gb_bus_write(address, value & 0xFF);
+    gb_bus_write( (value >> 8) & 0xFF,address + 1);
+    gb_bus_write( value & 0xFF, address);
     return;
 }
