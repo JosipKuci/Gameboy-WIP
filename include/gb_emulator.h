@@ -6,6 +6,7 @@ struct gb_emulator_info
 {
     bool is_paused;
     bool is_running;
+    bool is_killed;
     uint64_t timer_ticks; 
 };
 
