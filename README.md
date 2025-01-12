@@ -16,3 +16,7 @@ Then to start the emulator, change into the  `bin` directory and start the main.
 This emulator is in its very early stage of development, currently I have only implemented
 most of the instruction set and not much else, however you can see most of the logic in [gb_instruction_processing file](https://github.com/JosipKuci/Gameboy/blob/main/src/gb_instruction_processing.c)
 It currently displays each instruction being executed, as well as all the registers and flags.
+
+### Update 12/1/2025
+The CPU is finally fully implemented and it passes all of the 11 Blaarg tests!
+Next will be the PPU
