@@ -30,6 +30,6 @@ uint8_t gb_hram_read(uint16_t address)
 }
 void gb_hram_write(uint8_t value, uint16_t address)
 {
-    uint16_t hram_address=address-0xFF80;;
+    uint16_t hram_address=address-0xFF80;
     memory_info.hram[hram_address]=value;
 }
