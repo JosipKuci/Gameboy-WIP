@@ -3,7 +3,8 @@
 #include "gb_cpu.h"
 #include "gb_cartridge.h"
 #include "gb_io.h"
-#include <stdio.h>
+#include "gb_ppu.h"
+#include "gb_dma.h"
 uint8_t gb_bus_read(uint16_t address)
 {
     if(address < 0x8000) //Cartridge memory
@@ -12,9 +13,7 @@ uint8_t gb_bus_read(uint16_t address)
     }
     else if(address < 0xA000) //VRAM
     {
-        //Not implemented
-        //fprintf(stderr, "NOT YET IMPLEMENTED\n"); exit(-5);
-        return 0;
+        return gb_ppu_vram_read(address);
     }
     else if(address < 0xC000) //Cartridge RAM
     {
@@ -31,9 +30,11 @@ uint8_t gb_bus_read(uint16_t address)
     }
     else if(address < 0xFEA0) //Object attribute memory (OAM)
     {
-        //Not implemented
-        //fprintf(stderr, "NOT YET IMPLEMENTED\n"); exit(-5);
-        return 0;
+        if(gb_dma_is_transferring())
+        {
+            return 0xFF;//If dma is transferring, cpu cannot access data
+        }
+        return gb_ppu_oam_read(address);
     }
     else if(address < 0xFF00) //Not usable
     {
@@ -68,7 +69,7 @@ void gb_bus_write(uint8_t value, uint16_t address)
     }
     else if(address < 0xA000) //VRAM
     {
-        //Not implemented
+        gb_ppu_vram_write(value,address);
     }
     else if(address < 0xC000) //Cartridge RAM
     {
@@ -84,7 +85,11 @@ void gb_bus_write(uint8_t value, uint16_t address)
     }
     else if(address < 0xFEA0) //Object attribute memory (OAM)
     {
-        //Not implemented
+        if(gb_dma_is_transferring())
+        {
+            return;//If dma is transferring, cpu cannot access data
+        }
+        gb_ppu_oam_write(value,address);
     }
     else if(address < 0xFF00) //Not usable
     {
