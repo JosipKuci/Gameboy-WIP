@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "gb_registers.h"
 #include "gb_instructions.h"
+#include "gb_interrupts.h"
 #include "gb_emulator.h"
 struct gb_cpu_info
 {
@@ -44,4 +45,5 @@ uint8_t gb_cpu_read_register_cb(enum register_type regi);
 
 uint8_t gb_cpu_get_interrupt_flags();
 void gb_cpu_set_interrupt_flags(uint8_t value);
+void gb_cpu_request_interrupt(enum gb_interrupt_type interrupt);
 #endif
