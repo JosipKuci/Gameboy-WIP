@@ -22,12 +22,11 @@ void gb_dma_tick()
             dma_info.delay--;
             return;
         }
-        else
-        {
+    
             gb_ppu_oam_write(gb_bus_read((dma_info.value*0x100)+dma_info.current_byte),dma_info.current_byte);
             dma_info.current_byte++;
             dma_info.is_active=dma_info.current_byte<0xA0;
-        }
+        
     }
 }
 bool gb_dma_is_transferring()
