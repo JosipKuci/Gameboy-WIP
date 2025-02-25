@@ -1,6 +1,6 @@
 INCLUDES= -I ./include
 FLAGS=-Wall -g
-OBJECTS=./build/gb_emulator.o ./build/gb_cpu.o ./build/gb_cartridge.o ./build/gb_data_bus.o ./build/gb_instructions.o ./build/gb_instruction_processing.o ./build/gb_memory.o ./build/gb_stack.o ./build/gb_interrupts.o ./build/gb_interface.o ./build/gb_io.o ./build/gb_blarg_debug.o ./build/gb_timer.o ./build/gb_ppu.o ./build/gb_dma.o ./build/gb_lcd.o
+OBJECTS=./build/gb_emulator.o ./build/gb_cpu.o ./build/gb_cartridge.o ./build/gb_data_bus.o ./build/gb_instructions.o ./build/gb_instruction_processing.o ./build/gb_memory.o ./build/gb_stack.o ./build/gb_interrupts.o ./build/gb_interface.o ./build/gb_io.o ./build/gb_blarg_debug.o ./build/gb_timer.o ./build/gb_ppu.o ./build/gb_dma.o ./build/gb_lcd.o ./build/gb_ppu_pipeline.o ./build/gb_joypad.o
 all: ${OBJECTS}
 	gcc  ${FLAGS} ${INCLUDES} ./src/main.c ${OBJECTS} -L ./lib -lmingw32 -lpthread -lSDL2main -lSDL2 -lSDL2_ttf -o ./bin/main
 
@@ -51,3 +51,9 @@ all: ${OBJECTS}
 
 ./build/gb_lcd.o:src/gb_lcd.c
 	gcc ${FLAGS} ${INCLUDES} ./src/gb_lcd.c -c -o ./build/gb_lcd.o
+
+./build/gb_ppu_pipeline.o:src/gb_ppu_pipeline.c
+	gcc ${FLAGS} ${INCLUDES} ./src/gb_ppu_pipeline.c -c -o ./build/gb_ppu_pipeline.o
+
+./build/gb_joypad.o:src/gb_joypad.c
+	gcc ${FLAGS} ${INCLUDES} ./src/gb_joypad.c -c -o ./build/gb_joypad.o
