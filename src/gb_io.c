@@ -2,12 +2,15 @@
 #include "gb_timer.h"
 #include "gb_cpu.h"
 #include "gb_dma.h"
+#include "gb_joypad.h"
 #include "gb_lcd.h"
 static char data_on_serial[2];
 uint8_t gb_io_read(uint16_t address)
 {
     switch(address)
     {
+        case 0xFF00:
+            return *gb_joypad_get_joypad_register();
         case 0xFF01:
             return data_on_serial[0];
         case 0xFF02:
@@ -27,6 +30,8 @@ void gb_io_write(uint8_t value,uint16_t address)
 {
     switch(address)
     {
+        case 0xFF00:
+            gb_joypad_set_selection(value);
         case 0xFF01:
             data_on_serial[0]=value;
             return;
