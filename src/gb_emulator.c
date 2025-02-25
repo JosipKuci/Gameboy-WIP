@@ -83,9 +83,9 @@ int gb_emulator_init(int argc, char **argv)
         gb_interface_handle_events();
         if(previous_frame != gb_ppu_get_info()->current_frame)
         {
-            gb_ui_update_debug_window();
-            previous_frame=gb_ppu_get_info()->current_frame;
+            gb_ui_update_window();
         }
+        previous_frame=gb_ppu_get_info()->current_frame;
     }
     return 0;
 }
