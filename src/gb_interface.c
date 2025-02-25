@@ -1,6 +1,8 @@
 #include "gb_interface.h"
 #include "gb_emulator.h"
+#include "gb_ppu.h"
 #include "gb_data_bus.h"
+#include "gb_joypad.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
@@ -28,10 +30,19 @@ void gb_initialize_interface()
     //Window for main screen
     SDL_CreateWindowAndRenderer(1024, 768, 0, &sdlWindow, &sdlRenderer);
 
+    screen = SDL_CreateRGBSurface(0, 1024, 768, 32,
+        0x00FF0000,
+        0x0000FF00,
+        0x000000FF,
+        0xFF000000);
+    sdlTexture = SDL_CreateTexture(sdlRenderer,
+            SDL_PIXELFORMAT_ARGB8888,
+            SDL_TEXTUREACCESS_STREAMING,
+            1024, 768);
 
 
     //Window for debug screen (tilemap)
-    SDL_CreateWindowAndRenderer(16*8*scale, 32*8*scale, 0, &sdlDebugWindow, &sdlDebugRenderer);
+    SDL_CreateWindowAndRenderer(16*8*scale, 768, 0, &sdlDebugWindow, &sdlDebugRenderer);
 
 
     DebugScreen = SDL_CreateRGBSurface(0, (16 * 8 * scale) + (16 * scale), 
@@ -83,7 +94,7 @@ void gb_ui_update_debug_window()
     rectangle.y=0;
     rectangle.w=DebugScreen->w;
     rectangle.h=DebugScreen->h;
-    //SDL_FillRect(DebugScreen,&rectangle,0xFF111111);
+    SDL_FillRect(DebugScreen,&rectangle,0xFF111111);
 
     uint16_t vram_address=0x8000;
 
@@ -108,20 +119,142 @@ void gb_ui_update_debug_window()
 
 void gb_ui_update_window()
 {
+    SDL_Rect rc;
+    rc.x = rc.y = 0;
+    rc.w = rc.h = 2048;
 
+    uint32_t *video_buffer = gb_ppu_get_info()->video_buffer;
+    for (int line_num = 0; line_num < Y_RESOLUTION; line_num++) {
+        for (int x = 0; x < X_RESOLUTION; x++) {
+            rc.x = x * scale;
+            rc.y = line_num * scale;
+            rc.w = scale;
+            rc.h = scale;
+
+            SDL_FillRect(screen, &rc, video_buffer[x + (line_num * X_RESOLUTION)]);
+        }
+    }
+
+    SDL_UpdateTexture(sdlTexture, NULL, screen->pixels, screen->pitch);
+    SDL_RenderClear(sdlRenderer);
+    SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, NULL);
+    SDL_RenderPresent(sdlRenderer);
+    gb_ui_update_debug_window();
 }
 
 void delay(uint32_t ms) {
     SDL_Delay(ms);
 }
+gb_interface_press_key(uint32_t key_pressed)
+{
+    //Up
+    if(key_pressed==SDLK_w)
+    {
+        *gb_joypad_get_joypad_dpad_values()&=~(0b00000100);
+    }
+    //Down
+    else if(key_pressed==SDLK_s)
+    {
+        *gb_joypad_get_joypad_dpad_values()&=~(0b00001000);
+    }
+    //Left
+    else if(key_pressed==SDLK_a)
+    {
+        *gb_joypad_get_joypad_dpad_values()&=~(0b10);
+    }
+    //Right
+    else if(key_pressed==SDLK_d)
+    {
+        *gb_joypad_get_joypad_dpad_values()&=~(0b1);
+    }
+    //Start
+    else if(key_pressed==SDLK_RETURN)
+    {
+        *gb_joypad_get_joypad_button_values()&=~(0b00001000);
+    }
+    //Select
+    else if(key_pressed==SDLK_TAB)
+    {
+        *gb_joypad_get_joypad_button_values()&=~(0b00000100);
+    }
+    //B
+    else if(key_pressed==SDLK_o)
+    {
+        *gb_joypad_get_joypad_button_values()&=~(0b10);
+        
+    }
+    //A
+    else if(key_pressed==SDLK_p)
+    {
+        *gb_joypad_get_joypad_button_values()&=~(0b1);
+        
+    }
+
+}
+
+gb_interface_depress_key(uint32_t key_pressed)
+{
+    //Up
+    if(key_pressed==SDLK_w)
+    {
+        *gb_joypad_get_joypad_dpad_values()|=(0b00000100);
+    }
+    //Down
+    else if(key_pressed==SDLK_s)
+    {
+        *gb_joypad_get_joypad_dpad_values()|=(0b00001000);
+        
+    }
+    //Left
+    else if(key_pressed==SDLK_a)
+    {
+        *gb_joypad_get_joypad_dpad_values()|=(0b10);
+    }
+    //Right
+    else if(key_pressed==SDLK_d)
+    {
+        *gb_joypad_get_joypad_dpad_values()|=(0b1);
+        
+    }
+    //Start
+    else if(key_pressed==SDLK_RETURN)
+    {
+        *gb_joypad_get_joypad_button_values()|=(0b00001000);
+        
+    }
+    //Select
+    else if(key_pressed==SDLK_TAB)
+    {
+        *gb_joypad_get_joypad_button_values()|=(0b00000100);
+        
+    }
+    //B
+    else if(key_pressed==SDLK_o)
+    {
+        *gb_joypad_get_joypad_button_values()|=(0b10);
+    }
+    //A
+    else if(key_pressed==SDLK_p)
+    {
+        *gb_joypad_get_joypad_button_values()|=(0b1);
+    }
+
+}
+
 void gb_interface_handle_events()
 {
     SDL_Event e;
     while (SDL_PollEvent(&e) > 0)
     {
-        //TODO SDL_UpdateWindowSurface(sdlWindow);
-        //TODO SDL_UpdateWindowSurface(sdlTraceWindow);
-        //TODO SDL_UpdateWindowSurface(sdlDebugWindow);
+        if(e.type==SDL_KEYDOWN)
+        {
+            gb_interface_press_key(e.key.keysym.sym);
+        }
+
+        if(e.type == SDL_KEYUP)
+        {
+            gb_interface_depress_key(e.key.keysym.sym);
+        }
 
         if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_CLOSE) {
             gb_emulator_get_info()->is_killed=true;
