@@ -16,7 +16,7 @@ bool check_interrupt(struct gb_cpu_info* cpu_info, uint16_t address, enum gb_int
     }
     return false;
 }
-void gb_cpu_handle_interrupts(struct gb_cpu_info* cpu_info)
+void gb_cpu_handle_interrupts(struct gb_cpu_info *cpu_info)
 {
     if(check_interrupt(cpu_info,0x40,IT_VBLANK))
         return;
