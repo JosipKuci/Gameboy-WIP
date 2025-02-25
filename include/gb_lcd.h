@@ -49,7 +49,7 @@ enum stat_interrupt{
         MODE0_SELECT =   0b1000,
         MODE1_SELECT =  0b10000,
         MODE2_SELECT = 0b100000,
-        LYC_SELECT =  0b1000000
+        LYC_SELECT =  0b1000000,
 };
 
 
