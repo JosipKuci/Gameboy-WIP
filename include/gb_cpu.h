@@ -45,5 +45,6 @@ uint8_t gb_cpu_read_register_cb(enum register_type regi);
 
 uint8_t gb_cpu_get_interrupt_flags();
 void gb_cpu_set_interrupt_flags(uint8_t value);
-void gb_cpu_request_interrupt(enum gb_interrupt_type interrupt);
+
+void gb_cpu_handle_interrupts(struct gb_cpu_info *cpu_info);
 #endif
