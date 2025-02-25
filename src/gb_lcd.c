@@ -55,7 +55,7 @@ uint16_t gb_lcd_get_window_data_area()
 
 uint16_t gb_lcd_get_window_map_area()
 {
-    if(gb_get_lcd_info()->lcd_control&0x20)
+    if(gb_get_lcd_info()->lcd_control&0x40)
     {
         return 0x9C00;
     }
@@ -64,7 +64,7 @@ uint16_t gb_lcd_get_window_map_area()
 
 uint8_t gb_lcd_is_window_enabled()
 {
-    if(gb_get_lcd_info()->lcd_control&0x40)
+    if(gb_get_lcd_info()->lcd_control&0x20)
     {
         return 1;
     }
@@ -179,24 +179,24 @@ void gb_lcd_update_palette(uint8_t value, uint8_t palette)
 
 void gb_lcd_write(uint8_t value, uint16_t address)
 {
-    address-=0xFF40;//Remove the offset
+    uint8_t offset=address-0xFF40;//Remove the offset
     uint8_t* pointer=(uint8_t *)&lcd_info;
-    pointer[address]=value;
-    if( address == 0x6) //0xFF46
+    pointer[offset]=value;
+    if( offset == 6) //0xFF46
     {
         gb_dma_initialize(value);
     }
-    else if(address == 0x7)
+    else if(address == 0xFF47)
     {
         gb_lcd_update_palette(value,0);
     }
-    else if(address == 0x8)
+    else if(address == 0xFF48)
     {
         gb_lcd_update_palette(value,1);
     }
-    else if(address == 0x9)
+    else if(address == 0xFF49)
     {
-        gb_lcd_update_palette(value,2); //Mozda je krivo?
+        gb_lcd_update_palette(value,2);
     }
     return;
 }
