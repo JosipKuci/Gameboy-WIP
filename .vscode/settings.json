@@ -61,7 +61,8 @@
     "gb_data_bus.h": "c",
     "type_traits": "c",
     "gb_cpu.h": "c",
-    "gb_lcd.h": "c"
+    "gb_lcd.h": "c",
+    "gb_ppu.h": "c"
   },
   "makefile.configureOnOpen": false
 }
