@@ -458,8 +458,8 @@ bool gb_cpu_step()
         gb_fetch_instruction();
         gb_emulator_cycle(1);
         gb_fetch_data(); 
-        printf("%08llX - %04X: %-7s (%02X %02X %02X) A: %02X BC: %02X%02X DE: %02X%02X HL: %02X%02X FLAGS:%02X \n", gb_emulator_get_info()->timer_ticks, PC,  instruction_name(cpu_info.current_instruction->type), cpu_info.current_opcode,
-        gb_bus_read(PC + 1), gb_bus_read(PC + 2), cpu_info.registers.a, cpu_info.registers.b, cpu_info.registers.c, cpu_info.registers.d, cpu_info.registers.e, cpu_info.registers.h, cpu_info.registers.l, cpu_info.registers.f);
+        /*printf("%08llX - %04X: %-7s (%02X %02X %02X) A: %02X BC: %02X%02X DE: %02X%02X HL: %02X%02X FLAGS:%02X \n", gb_emulator_get_info()->timer_ticks, PC,  instruction_name(cpu_info.current_instruction->type), cpu_info.current_opcode,
+        gb_bus_read(PC + 1), gb_bus_read(PC + 2), cpu_info.registers.a, cpu_info.registers.b, cpu_info.registers.c, cpu_info.registers.d, cpu_info.registers.e, cpu_info.registers.h, cpu_info.registers.l, cpu_info.registers.f);*/
         debug_print();
         
         if (cpu_info.current_instruction == NULL) {
