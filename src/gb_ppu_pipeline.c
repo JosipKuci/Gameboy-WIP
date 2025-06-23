@@ -138,7 +138,9 @@ void gb_ppu_pipeline_load_window_tile()
         if(gb_get_lcd_info()->lcd_y >= gb_get_lcd_info()->window_y && gb_get_lcd_info()->lcd_y < gb_get_lcd_info()->window_y + X_RESOLUTION)
         {
             uint8_t window_tile_y_pos = gb_ppu_get_info()->window_line/8;
-            gb_ppu_get_info()->FIFO_info.bg_data[0]=gb_bus_read(gb_lcd_get_window_map_area()+((gb_ppu_get_info()->FIFO_info.fetched_x+7-gb_get_lcd_info()->window_x)/8)+(window_tile_y_pos*32));
+            gb_ppu_get_info()->FIFO_info.bg_data[0]=gb_bus_read(gb_lcd_get_window_map_area()+
+            ((gb_ppu_get_info()->FIFO_info.fetched_x+7-gb_get_lcd_info()->window_x)/8)+
+            (window_tile_y_pos*32));
             if(gb_lcd_get_window_data_area()==0x8800) //If it is in this area, increment by 128
             {
                 gb_ppu_get_info()->FIFO_info.bg_data[0]+=128;

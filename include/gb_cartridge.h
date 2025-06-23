@@ -31,6 +31,18 @@ struct gb_cartridge_info
     uint32_t gb_rom_size;
     uint8_t* rom_data;
 
+    //MBC1
+    uint8_t is_ram_enabled;
+    uint8_t is_ram_banking;
+    uint8_t* rom_bank_x; //First rom bank
+    uint8_t banking_mode;
+    uint8_t rom_bank_value;
+    uint8_t ram_bank_value;
+    uint8_t* current_ram_bank;
+    uint8_t* all_ram_banks[16];
+
+    uint8_t has_battery;
+    uint8_t should_save_battery_data;
 };
 
 static const char *ROM_TYPES[] = {
@@ -141,4 +153,9 @@ const char* gb_get_cartridge_type_name();
 bool gb_test_checksum(uint8_t* rom_data);
 uint8_t gb_cartridge_read(uint16_t address);
 void gb_cartridge_write(uint8_t value,uint16_t address);
+uint8_t gb_cartridge_does_cartridge_need_save();
+uint8_t gb_cartridge_is_cartridge_mbc1();
+uint8_t gb_cartridge_does_cartridge_have_battery();
+void gb_cartridge_load_battery();
+void gb_cartridge_save_battery();
 #endif

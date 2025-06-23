@@ -3,6 +3,7 @@
 #include "gb_lcd.h"
 #include "gb_ppu_pipeline.h"
 #include "gb_cpu.h"
+#include "gb_cartridge.h"
 #include "SDL2/SDL.h"
 static uint32_t target_frame_time=1000/60;
 static long previous_frame_time=0;
@@ -117,6 +118,11 @@ void gb_ppu_hblank()
                 frame_count = 0;
 
                 printf("FPS: %d\n", fps);
+
+                if(gb_cartridge_does_cartridge_need_save())
+                {
+                    gb_cartridge_save_battery();
+                }
             }
 
             frame_count++;
